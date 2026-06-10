@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAP Marketplace</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scaleUp {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+    .animate-scaleUp {
+      animation: scaleUp 0.2s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
+
+  <div id="app"></div>
+
+  <script>
+    // Data mock dasar produk hasil karya siswa
+    const DEFAULT_PRODUCTS = [
+      {
+        id: '1',
+        name: 'Kripik Tempe Keju Premium',
+        category: 'Kuliner',
+        targetRole: 'Siswa',
+        price: 15000,
+        image: 'https://images.unsplash.com/photo-1599490659213-e2b9527bb087?w=500&auto=format&fit=crop&q=60',
+        description: 'Kripik tempe renyah dengan balutan bumbu keju premium buatan siswa jurusan Kuliner. Tanpa bahan pengawet!',
+        stock: 25,
+        seller: 'Kelas XI Kuliner 1'
+      },
+      {
+        id: '2',
+        name: 'Meja Belajar Minimalis Kayu Jati',
+        category: 'Kriya & Furniture',
+        targetRole: 'Orang Tua',
+        price: 350000,
+        image: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=500&auto=format&fit=crop&q=60',
+        description: 'Meja belajar kokoh berdesain minimalis estetik, diproduksi langsung oleh siswa jurusan Kriya Kayu.',
+        stock: 3,
+        seller: 'Kelas XII Kriya Kayu'
+      },
+      {
+        id: '3',
+        name: 'Aplikasi Kasir Sekolah "SmartCash"',
+        category: 'Teknologi',
+        targetRole: 'Guru',
+        price: 500000,
+        image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500&auto=format&fit=crop&q=60',
+        description: 'Software kasir berbasis web untuk koperasi sekolah. Mudah digunakan dan dilengkapi laporan keuangan otomatis karya siswa RPL.',
+        stock: 10,
+        seller: 'Tim RPL Creative'
+      },
+      {
+        id: '4',
+        name: 'Pupuk Kompos Organik "Go-Green"',
+        category: 'Pertanian',
+        targetRole: 'Umum',
+        price: 20000,
+        image: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=500&auto=format&fit=crop&q=60',
+        description: 'Pupuk kompos super subur hasil olahan limbah organik sekolah oleh siswa jurusan Agribisnis Organik.',
+        stock: 50,
+        seller: 'Green Club Agro'
+      },
+      {
+        id: '5',
+        name: 'Tas Kanvas Lukis Handmade',
+        category: 'Fashion',
+        targetRole: 'Umum',
+        price: 75000,
+        image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&auto=format&fit=crop&q=60',
+        description: 'Tas jinjing kanvas tebal dengan lukisan tangan kustom bertema kebudayaan lokal karya siswa Seni Rupa.',
+        stock: 8,
+        seller: 'Siswa Seni Rupa'
+      }
+    ];
+
+    // Pilihan Warna Tema Aplikasi
+    const THEME_PRESETS = [
+      { id: 'emerald', name: 'Emerald Green', primary: 'bg-emerald-600', hover: 'hover:bg-emerald-700', text: 'text-emerald-600', border: 'border-emerald-600', ring: 'focus:ring-emerald-500', bgLight: 'bg-emerald-50', bgHeader: 'from-emerald-700 to-teal-900' },
+      { id: 'indigo', name: 'Indigo Blue', primary: 'bg-indigo-600', hover: 'hover:bg-indigo-700', text: 'text-indigo-600', border: 'border-indigo-600', ring: 'focus:ring-indigo-500', bgLight: 'bg-indigo-50', bgHeader: 'from-indigo-700 to-purple-900' },
+      { id: 'rose', name: 'Warm Rose', primary: 'bg-rose-600', hover: 'hover:bg-rose-700', text: 'text-rose-600', border: 'border-rose-600', ring: 'focus:ring-rose-500', bgLight: 'bg-rose-50', bgHeader: 'from-rose-700 to-red-900' },
+      { id: 'amber', name: 'Amber Gold', primary: 'bg-amber-600', hover: 'hover:bg-amber-700', text: 'text-amber-600', border: 'border-amber-600', ring: 'focus:ring-amber-500', bgLight: 'bg-amber-50', bgHeader: 'from-amber-600 to-orange-800' },
+    ];
+
+    // --- State Management ---
+    let state = {
+      products: JSON.parse(localStorage.getItem('cap_products')) || DEFAULT_PRODUCTS,
+      currentTheme: JSON.parse(localStorage.getItem('cap_theme')) || THEME_PRESETS[0],
+      logoSettings: JSON.parse(localStorage.getItem('cap_logo')) || { type: 'text', text: 'CAP Marketplace', imageUrl: '' },
+      // Menggunakan strict check agar password yang diubah tidak terhapus / ke-reset ke default saat re-load
+      adminPassword: localStorage.getItem('cap_admin_password') !== null ? localStorage.getItem('cap_admin_password') : 'admin123',
+      orders: JSON.parse(localStorage.getItem('cap_orders')) || [],
+      activeTab: 'pengunjung', // 'pengunjung', 'admin'
+      adminSubTab: 'katalog', // 'katalog', 'pesanan'
+      isAdminAuthenticated: false,
+      searchQuery: '',
+      selectedRoleFilter: 'Semua',
+      selectedCategoryFilter: 'Semua',
+      isEditing: false,
+      editingProduct: null,
+      productToDelete: null,
+      orderToDelete: null,
+      orderingProduct: null,
+      orderForm: { name: '', role: 'Siswa', phone: '', email: '', notes: '', quantity: 1 },
+      orderSuccess: false,
+      inputPassword: '',
+      authError: '',
+      isChangingPassword: false,
+      passwordForm: { old: '', new1: '', new2: '' },
+      passwordMessage: { type: '', text: '' },
+      tempLogo: null
+    };
+
+    state.tempLogo = { ...state.logoSettings };
+
+    function saveState() {
+      localStorage.setItem('cap_products', JSON.stringify(state.products));
+      localStorage.setItem('cap_theme', JSON.stringify(state.currentTheme));
+      localStorage.setItem('cap_logo', JSON.stringify(state.logoSettings));
+      localStorage.setItem('cap_admin_password', state.adminPassword);
+      localStorage.setItem('cap_orders', JSON.stringify(state.orders));
+    }
+
+    // --- DOM Rendering Engine ---
+    function render() {
+      const app = document.getElementById('app');
+      const newOrdersCount = state.orders.filter(o => o.status === 'Baru').length;
+      const categories = ['Semua', ...new Set(state.products.map(p => p.category))];
+
+      // Saring produk
+      const filteredProducts = state.products.filter(product => {
+        const matchesSearch = product.name.toLowerCase().includes(state.searchQuery.toLowerCase()) || 
+                              product.description.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+                              product.seller.toLowerCase().includes(state.searchQuery.toLowerCase());
+        const matchesRole = state.selectedRoleFilter === 'Semua' || product.targetRole === state.selectedRoleFilter || product.targetRole === 'Semua';
+        const matchesCategory = state.selectedCategoryFilter === 'Semua' || product.category === state.selectedCategoryFilter;
+        return matchesSearch && matchesRole && matchesCategory;
+      });
+
+      app.className = `min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col`;
+
+      app.innerHTML = `
+        <!-- HEADER -->
+        <header class="bg-gradient-to-r ${state.currentTheme.bgHeader} text-white shadow-md sticky top-0 z-40 transition-all duration-300">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+              <div class="flex items-center space-x-3">
+                <div class="bg-white/15 p-2.5 rounded-xl backdrop-blur-md border border-white/10 flex items-center justify-center">
+                  <i data-lucide="shopping-bag" class="h-7 w-7 text-white"></i>
+                </div>
+                <div>
+                  ${state.logoSettings.type === 'text' ? `
+                    <h1 class="text-xl sm:text-2xl font-black tracking-tight drop-shadow-sm">${state.logoSettings.text}</h1>
+                  ` : `
+                    <img src="${state.logoSettings.imageUrl || 'https://via.placeholder.com/150x50?text=LOGO'}" alt="Logo" class="max-h-12 max-w-[180px] object-contain rounded-lg" onerror="this.src='https://via.placeholder.com/150x50?text=Logo+Error'">
+                  `}
+                  <span class="text-xs text-white/70 block font-light -mt-1">Karya Siswa, Kebanggaan Sekolah</span>
+                </div>
+              </div>
+
+              <!-- Nav Tabs -->
+              <div class="flex items-center space-x-2 bg-black/15 p-1 rounded-xl border border-white/5">
+                <button onclick="switchTab('pengunjung')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 ${state.activeTab === 'pengunjung' ? 'bg-white text-slate-900 shadow' : 'text-white hover:bg-white/10'}">
+                  <i data-lucide="users" class="h-4 w-4"></i>
+                  <span class="hidden sm:inline">Katalog Pengunjung</span>
+                  <span class="sm:hidden">Katalog</span>
+                </button>
+                <button onclick="switchTab('admin')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 relative ${state.activeTab === 'admin' ? 'bg-white text-slate-900 shadow' : 'text-white hover:bg-white/10'}">
+                  <i data-lucide="lock" class="h-4 w-4"></i>
+                  <span>Panel Admin</span>
+                  ${newOrdersCount > 0 ? `<span class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] h-5 w-5 rounded-full flex items-center justify-center font-bold border-2 border-slate-950 animate-pulse">${newOrdersCount}</span>` : ''}
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+          ${state.activeTab === 'pengunjung' ? `
+            <!-- HALAMAN PENGUNJUNG -->
+            <div class="space-y-8 animate-fadeIn">
+              <!-- Banner Cover -->
+              <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br ${state.currentTheme.bgHeader} text-white shadow-xl">
+                <div class="relative px-6 py-12 sm:px-12 sm:py-20 max-w-3xl space-y-6">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-md">
+                    <i data-lucide="sparkles" class="h-3 w-3 mr-1"></i> Kewirausahaan Berbasis Sekolah
+                  </span>
+                  <h2 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">Wadah Karya Kreatif & Produk Unggulan Siswa</h2>
+                  <p class="text-lg text-white/80 max-w-xl font-light">Mendukung pengembangan jiwa kewirausahaan siswa dengan menyajikan hasil karya orisinal terbaik yang siap dipesan oleh guru, siswa, orang tua, maupun masyarakat umum.</p>
+                  <div class="flex flex-wrap gap-3 pt-2">
+                    <span class="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium border border-white/5">👨‍🏫 Guru</span>
+                    <span class="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium border border-white/5">🎒 Siswa</span>
+                    <span class="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium border border-white/5">👪 Orang Tua</span>
+                    <span class="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium border border-white/5">🌐 Umum</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pencarian dan Filter -->
+              <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-6">
+                <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                  <div class="relative flex-1">
+                    <i data-lucide="search" class="absolute left-4 top-3.5 h-5 w-5 text-slate-400"></i>
+                    <input type="text" id="searchInput" placeholder="Cari produk karya siswa... (misal: kripik, pupuk, meja)" value="${state.searchQuery}" oninput="updateSearch(this.value)" class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all text-sm">
+                    ${state.searchQuery ? `<button onclick="clearSearch()" class="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="h-4 w-4"></i></button>` : ''}
+                  </div>
+
+                  <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 overflow-x-auto whitespace-nowrap">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider px-3 py-1">Untuk:</span>
+                    ${['Semua', 'Guru', 'Siswa', 'Orang Tua', 'Umum'].map(role => `
+                      <button onclick="setRoleFilter('${role}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${state.selectedRoleFilter === role ? `${state.currentTheme.primary} text-white shadow-sm` : 'text-slate-600 hover:bg-slate-200/50'}">${role}</button>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <div class="border-t border-slate-100 pt-4 flex flex-wrap gap-2 items-center">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mr-2">Kategori Produk:</span>
+                  ${categories.map(cat => `
+                    <button onclick="setCategoryFilter('${cat}')" class="px-3 py-1 rounded-full text-xs font-medium border transition-all ${state.selectedCategoryFilter === cat ? `${state.currentTheme.primary} ${state.currentTheme.border} text-white shadow-sm` : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}">${cat}</button>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- Katalog Grid -->
+              <div class="space-y-6">
+                <div>
+                  <h3 class="text-2xl font-extrabold tracking-tight text-slate-900">${state.selectedRoleFilter !== 'Semua' ? `Produk Spesial Untuk ${state.selectedRoleFilter}` : 'Katalog Unggulan'}</h3>
+                  <p class="text-sm text-slate-500">Menampilkan ${filteredProducts.length} produk pilihan terbaik</p>
+                </div>
+
+                ${filteredProducts.length === 0 ? `
+                  <div class="bg-white rounded-2xl py-16 px-4 text-center border border-slate-100 shadow-sm">
+                    <i data-lucide="shopping-bag" class="h-16 w-16 mx-auto text-slate-300 mb-4"></i>
+                    <p class="text-lg font-bold text-slate-700">Produk Tidak Ditemukan</p>
+                    <p class="text-slate-500 text-sm max-w-md mx-auto mt-1">Coba ubah kata kunci pencarian Anda atau reset filter peran dan kategori untuk melihat produk lainnya.</p>
+                    <button onclick="resetFilters()" class="mt-4 px-4 py-2 rounded-xl text-sm font-semibold text-white ${state.currentTheme.primary} ${state.currentTheme.hover}">Reset Filter</button>
+                  </div>
+                ` : `
+                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${filteredProducts.map(product => `
+                      <div class="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col group">
+                        <div class="relative aspect-video w-full bg-slate-100 overflow-hidden">
+                          <img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=500'">
+                          <div class="absolute top-3 left-3">
+                            <span class="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">${product.category}</span>
+                          </div>
+                          <div class="absolute top-3 right-3">
+                            <span class="text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-md ${
+                              product.targetRole === 'Siswa' ? 'bg-blue-600/90' :
+                              product.targetRole === 'Guru' ? 'bg-purple-600/90' :
+                              product.targetRole === 'Orang Tua' ? 'bg-amber-600/90' : 'bg-emerald-600/90'
+                            }">Untuk ${product.targetRole}</span>
+                          </div>
+                        </div>
+
+                        <div class="p-5 flex-1 flex flex-col justify-between">
+                          <div class="space-y-2">
+                            <p class="text-xs font-semibold text-slate-400">${product.seller}</p>
+                            <h4 class="font-bold text-lg text-slate-800 line-clamp-1 group-hover:text-slate-900 transition-colors">${product.name}</h4>
+                            <p class="text-slate-600 text-sm line-clamp-2 font-light">${product.description}</p>
+                          </div>
+
+                          <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                            <div>
+                              <span class="block text-xs font-medium text-slate-400">Harga</span>
+                              <span class="text-xl font-black ${state.currentTheme.text}">Rp ${product.price.toLocaleString('id-ID')}</span>
+                            </div>
+
+                            ${product.stock > 0 ? `
+                              <button onclick="openOrderModal('${product.id}')" class="px-4 py-2 rounded-xl text-sm font-bold text-white transition-all flex items-center space-x-1.5 ${state.currentTheme.primary} ${state.currentTheme.hover}">
+                                <i data-lucide="shopping-cart" class="h-4 w-4"></i>
+                                <span>Pesan</span>
+                              </button>
+                            ` : `
+                              <span class="bg-red-50 text-red-600 px-3 py-1.5 rounded-xl text-xs font-bold border border-red-100">Stok Habis</span>
+                            `}
+                          </div>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+              </div>
+            </div>
+          ` : `
+            <!-- HALAMAN ADMINISTRATOR -->
+            <div class="space-y-8 animate-fadeIn">
+              ${!state.isAdminAuthenticated ? `
+                <!-- LOGIN ADMIN -->
+                <div class="max-w-md mx-auto bg-white rounded-3xl p-8 shadow-md border border-slate-100 space-y-6">
+                  <div class="text-center space-y-2">
+                    <div class="h-14 w-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto text-red-500 border border-red-100">
+                      <i data-lucide="lock" class="h-6 w-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">Autentikasi Administrator</h3>
+                    <p class="text-sm text-slate-500">Masukkan kata sandi khusus administrator untuk mengelola logo, warna, katalog produk, dan daftar pemesanan.</p>
+                  </div>
+
+                  <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Kata Sandi Admin</label>
+                      <input type="password" id="adminPassInput" placeholder="Masukkan kata sandi..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-300 text-sm" required autofocus>
+                      ${state.authError ? `<p class="text-xs font-medium text-red-500 mt-1.5">${state.authError}</p>` : ''}
+                    </div>
+                    <button type="submit" class="w-full py-3 rounded-xl text-sm font-bold text-white shadow-sm transition-all ${state.currentTheme.primary} ${state.currentTheme.hover}">Buka Akses Panel</button>
+                  </form>
+                </div>
+              ` : `
+                <!-- ADMIN PANEL UTAMA -->
+                <div class="space-y-6">
+                  <!-- Header Panel -->
+                  <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-center space-x-3.5">
+                      <div class="h-12 w-12 bg-green-50 text-green-600 border border-green-100 rounded-xl flex items-center justify-center">
+                        <i data-lucide="lock-open" class="h-6 w-6"></i>
+                      </div>
+                      <div>
+                        <h3 class="text-xl font-bold text-slate-800">Panel Administrator Aktif</h3>
+                        <p class="text-xs text-slate-400">Kelola identitas visual marketplace, daftar katalog produk, serta kelola pesanan masuk.</p>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center flex-wrap gap-2">
+                      <button onclick="openChangePassModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all flex items-center space-x-1.5">
+                        <i data-lucide="settings" class="h-3.5 w-3.5"></i>
+                        <span>Ubah Password Admin</span>
+                      </button>
+                      <button onclick="handleAdminLogout()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-all">Keluar Panel</button>
+                    </div>
+                  </div>
+
+                  <!-- Subtabs -->
+                  <div class="flex border-b border-slate-200">
+                    <button onclick="setAdminSubTab('katalog')" class="px-6 py-3 font-bold text-sm border-b-2 transition-all flex items-center space-x-2 ${state.adminSubTab === 'katalog' ? `${state.currentTheme.text} ${state.currentTheme.border.replace('border-', 'border-b-')}` : 'border-transparent text-slate-500 hover:text-slate-800'}">
+                      <i data-lucide="settings" class="h-4 w-4"></i>
+                      <span>Kelola Katalog & Tampilan</span>
+                    </button>
+                    <button onclick="setAdminSubTab('pesanan')" class="px-6 py-3 font-bold text-sm border-b-2 transition-all flex items-center space-x-2 relative ${state.adminSubTab === 'pesanan' ? `${state.currentTheme.text} ${state.currentTheme.border.replace('border-', 'border-b-')}` : 'border-transparent text-slate-500 hover:text-slate-800'}">
+                      <i data-lucide="clipboard-list" class="h-4 w-4"></i>
+                      <span>Daftar Pemesanan Masuk</span>
+                      ${newOrdersCount > 0 ? `<span class="ml-1.5 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">${newOrdersCount} Baru</span>` : ''}
+                    </button>
+                  </div>
+
+                  <!-- SUBTAB: KATALOG & TAMPILAN -->
+                  ${state.adminSubTab === 'katalog' ? `
+                    <div class="space-y-8 animate-fadeIn">
+                      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Atur Warna -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+                          <h4 class="font-extrabold text-slate-800 text-base flex items-center space-x-2">
+                            <i data-lucide="palette" class="h-4 w-4 text-slate-500"></i>
+                            <span>Atur Warna Tampilan</span>
+                          </h4>
+                          <p class="text-xs text-slate-500 leading-relaxed">Pilih palet warna aksen aplikasi. Perubahan akan langsung diaplikasikan ke tombol, teks, ikon, dan background utama.</p>
+                          <div class="grid grid-cols-2 gap-3">
+                            ${THEME_PRESETS.map(theme => {
+                              const isSelected = state.currentTheme.id === theme.id;
+                              return `
+                                <button onclick="setTheme('${theme.id}')" class="p-3 rounded-xl border text-left flex flex-col justify-between transition-all space-y-3 ${isSelected ? 'border-slate-800 bg-slate-50 ring-2 ring-slate-800/20' : 'border-slate-100 hover:bg-slate-50/50'}">
+                                  <div class="flex items-center justify-between w-full">
+                                    <span class="text-xs font-bold text-slate-700">${theme.name}</span>
+                                    ${isSelected ? '<i data-lucide="check" class="h-3.5 w-3.5 text-slate-900"></i>' : ''}
+                                  </div>
+                                  <div class="flex gap-1.5">
+                                    <div class="h-4 w-4 rounded-full ${theme.primary}"></div>
+                                    <div class="h-4 w-12 rounded bg-slate-200"></div>
+                                  </div>
+                                </button>
+                              `;
+                            }).join('')}
+                          </div>
+                        </div>
+
+                        <!-- Kelola Logo -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6 lg:col-span-2">
+                          <h4 class="font-extrabold text-slate-800 text-base flex items-center space-x-2">
+                            <i data-lucide="image" class="h-4 w-4 text-slate-500"></i>
+                            <span>Kelola Logo Aplikasi</span>
+                          </h4>
+                          <p class="text-xs text-slate-500">Ubah logo aplikasi dengan memilih jenis logo teks ataupun gambar kustom menggunakan tautan gambar luar.</p>
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                            <div class="space-y-4">
+                              <div class="flex bg-slate-50 p-1 rounded-xl border border-slate-200">
+                                <button type="button" onclick="setTempLogoType('text')" class="flex-1 py-1.5 rounded-lg text-xs font-semibold ${state.tempLogo.type === 'text' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}">Format Teks</button>
+                                <button type="button" onclick="setTempLogoType('image')" class="flex-1 py-1.5 rounded-lg text-xs font-semibold ${state.tempLogo.type === 'image' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}">Format Gambar</button>
+                              </div>
+
+                              ${state.tempLogo.type === 'text' ? `
+                                <div>
+                                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nama Aplikasi</label>
+                                  <input type="text" id="tempLogoTextInput" value="${state.tempLogo.text}" oninput="state.tempLogo.text = this.value; renderPreview();" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                                </div>
+                              ` : `
+                                <div>
+                                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">URL Gambar Logo</label>
+                                  <input type="text" id="tempLogoUrlInput" placeholder="https://contoh-link.com/logo.png" value="${state.tempLogo.imageUrl || ''}" oninput="state.tempLogo.imageUrl = this.value; renderPreview();" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                                </div>
+                              `}
+                              <button type="button" onclick="saveLogoSettings()" class="w-full py-2 rounded-xl text-xs font-bold text-white ${state.currentTheme.primary} ${state.currentTheme.hover}">Simpan Perubahan Logo</button>
+                            </div>
+
+                            <!-- Live Preview Header -->
+                            <div class="border border-dashed border-slate-200 rounded-2xl p-4 flex flex-col justify-between bg-slate-50/50">
+                              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Live Preview Header Anda:</span>
+                              <div class="p-4 rounded-xl bg-gradient-to-r ${state.currentTheme.bgHeader} flex items-center space-x-3 text-white">
+                                <i data-lucide="shopping-bag" class="h-6 w-6 shrink-0"></i>
+                                <div id="logoLivePreviewContainer">
+                                  <!-- Diisi lewat JS renderPreview -->
+                                </div>
+                              </div>
+                              <span class="text-[10px] text-slate-400 italic mt-3 text-center block">Sesuai dengan tema warna terpilih.</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Kelola Katalog Barang -->
+                      <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <h4 class="font-extrabold text-slate-900 text-lg">Kelola Katalog Barang</h4>
+                            <p class="text-xs text-slate-500">Tambah, ubah, atau hapus produk unggulan yang ditampilkan di halaman utama.</p>
+                          </div>
+                          <button onclick="openAddProductModal()" class="px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm flex items-center space-x-1.5 transition-all self-start sm:self-auto ${state.currentTheme.primary} ${state.currentTheme.hover}">
+                            <i data-lucide="plus" class="h-4 w-4"></i>
+                            <span>Tambah Barang Baru</span>
+                          </button>
+                        </div>
+
+                        <!-- Tabel Barang -->
+                        <div class="overflow-x-auto rounded-xl border border-slate-100">
+                          <table class="w-full text-left border-collapse">
+                            <thead>
+                              <tr class="bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
+                                <th class="py-4 px-4 w-24">Foto</th>
+                                <th class="py-4 px-4">Nama Produk</th>
+                                <th class="py-4 px-4">Kategori</th>
+                                <th class="py-4 px-4">Khusus Untuk</th>
+                                <th class="py-4 px-4">Produsen/Kelas</th>
+                                <th class="py-4 px-4">Harga</th>
+                                <th class="py-4 px-4 text-center w-12">Stok</th>
+                                <th class="py-4 px-4 text-right w-28">Aksi</th>
+                              </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
+                              ${state.products.length === 0 ? `
+                                <tr>
+                                  <td colSpan="8" class="py-12 text-center text-slate-400 font-medium">Belum ada data barang. Silakan tambahkan barang baru!</td>
+                                </tr>
+                              ` : state.products.map(p => `
+                                <tr class="hover:bg-slate-50/55 transition-colors">
+                                  <td class="py-3 px-4">
+                                    <img src="${p.image}" alt="${p.name}" class="w-16 h-10 object-cover rounded-lg border border-slate-200" onerror="this.src='https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=500'">
+                                  </td>
+                                  <td class="py-3 px-4 font-semibold text-slate-900">${p.name}</td>
+                                  <td class="py-3 px-4 text-xs">
+                                    <span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">${p.category}</span>
+                                  </td>
+                                  <td class="py-3 px-4 text-xs">
+                                    <span class="px-2.5 py-1 rounded-full font-semibold text-white ${
+                                      p.targetRole === 'Siswa' ? 'bg-blue-600/80' :
+                                      p.targetRole === 'Guru' ? 'bg-purple-600/80' :
+                                      p.targetRole === 'Orang Tua' ? 'bg-amber-600/80' : 'bg-emerald-600/80'
+                                    }">${p.targetRole}</span>
+                                  </td>
+                                  <td class="py-3 px-4 text-xs text-slate-500 font-medium">${p.seller}</td>
+                                  <td class="py-3 px-4 font-bold text-slate-900">Rp ${p.price.toLocaleString('id-ID')}</td>
+                                  <td class="py-3 px-4 text-center font-semibold text-slate-700">${p.stock} pcs</td>
+                                  <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end space-x-1">
+                                      <button onclick="openEditProductModal('${p.id}')" class="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all" title="Ubah Barang">
+                                        <i data-lucide="edit-2" class="h-4 w-4"></i>
+                                      </button>
+                                      <button onclick="handleDeleteProduct('${p.id}')" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all" title="Hapus Barang">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              `).join('')}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  ` : `
+                    <!-- SUBTAB: PEMESANAN MASUK -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6 animate-fadeIn">
+                      <div>
+                        <h4 class="font-extrabold text-slate-900 text-lg">Kelola Pemesanan Masuk</h4>
+                        <p class="text-xs text-slate-500">Pantau rincian pemesan, koordinasikan ke kelas terkait, dan kelola status prosesnya.</p>
+                      </div>
+
+                      ${state.orders.length === 0 ? `
+                        <div class="text-center py-16 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                          <i data-lucide="clipboard-list" class="h-16 w-16 mx-auto text-slate-300 mb-3"></i>
+                          <h5 class="font-bold text-slate-700 text-base">Belum Ada Pemesanan</h5>
+                          <p class="text-xs text-slate-400 max-w-sm mx-auto mt-1">Semua pesanan yang diajukan oleh pengunjung lewat form pesanan akan masuk secara real-time di panel ini.</p>
+                        </div>
+                      ` : `
+                        <div class="overflow-x-auto rounded-xl border border-slate-100">
+                          <table class="w-full text-left border-collapse">
+                            <thead>
+                              <tr class="bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
+                                <th class="py-4 px-4">Tanggal</th>
+                                <th class="py-4 px-4">Rincian Pemesan</th>
+                                <th class="py-4 px-4">Item Karya Siswa</th>
+                                <th class="py-4 px-4 text-center">Jumlah</th>
+                                <th class="py-4 px-4">Total Biaya</th>
+                                <th class="py-4 px-4 text-center">Status</th>
+                                <th class="py-4 px-4 text-right">Kelola Aksi</th>
+                              </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
+                              ${state.orders.map(o => `
+                                <tr class="hover:bg-slate-50/40 transition-colors ${o.status === 'Baru' ? 'bg-blue-50/30' : ''}">
+                                  <td class="py-4 px-4 whitespace-nowrap">
+                                    <span class="font-bold text-slate-900 block">${o.date}</span>
+                                  </td>
+                                  <td class="py-4 px-4">
+                                    <span class="font-bold text-slate-900 block text-sm">${o.customerName}</span>
+                                    <div class="flex flex-col gap-1 mt-0.5">
+                                      <div class="flex items-center space-x-2">
+                                        <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-semibold text-slate-600">${o.customerRole}</span>
+                                        ${o.customerPhone ? `<a href="https://wa.me/${o.customerPhone.replace(/^0/, '62')}" target="_blank" rel="noopener noreferrer" class="text-emerald-600 hover:underline font-medium">${o.customerPhone}</a>` : ''}
+                                      </div>
+                                      ${o.customerEmail ? `<a href="mailto:${o.customerEmail}" class="text-blue-600 hover:underline font-medium text-[11px] block">${o.customerEmail}</a>` : ''}
+                                    </div>
+                                    ${o.notes ? `<p class="text-[11px] text-slate-500 mt-1.5 italic bg-slate-50 p-1.5 rounded border border-slate-100 max-w-xs">" ${o.notes} "</p>` : ''}
+                                  </td>
+                                  <td class="py-4 px-4">
+                                    <div class="flex items-center space-x-2">
+                                      <img src="${o.productImage}" alt="${o.productName}" class="w-10 h-8 object-cover rounded border" onerror="this.src='https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=100'">
+                                      <div>
+                                        <span class="font-bold text-slate-800 block">${o.productName}</span>
+                                        <span class="text-[10px] text-slate-400">Produsen: ${o.seller}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td class="py-4 px-4 text-center font-bold text-slate-700">${o.quantity} pcs</td>
+                                  <td class="py-4 px-4 font-black text-slate-900 text-sm">Rp ${o.totalPrice.toLocaleString('id-ID')}</td>
+                                  <td class="py-4 px-4 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                      o.status === 'Baru' ? 'bg-blue-100 text-blue-700' :
+                                      o.status === 'Diproses' ? 'bg-amber-100 text-amber-700' :
+                                      'bg-green-100 text-green-700'
+                                    }">
+                                      ${o.status === 'Baru' ? '<i data-lucide="clock" class="h-3 w-3 mr-1"></i>' : ''}
+                                      ${o.status === 'Diproses' ? '<i data-lucide="alert-circle" class="h-3 w-3 mr-1 animate-pulse"></i>' : ''}
+                                      ${o.status === 'Selesai' ? '<i data-lucide="check-circle" class="h-3 w-3 mr-1"></i>' : ''}
+                                      ${o.status}
+                                    </span>
+                                  </td>
+                                  <td class="py-4 px-4 text-right">
+                                    <div class="flex items-center justify-end space-x-1.5">
+                                      ${o.status === 'Baru' ? `
+                                        <button onclick="updateOrderStatus('${o.id}', 'Diproses')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded-lg text-[10px] transition-all">Proses</button>
+                                      ` : ''}
+                                      ${o.status === 'Diproses' ? `
+                                        <button onclick="updateOrderStatus('${o.id}', 'Selesai')" class="bg-green-600 hover:bg-green-700 text-white font-bold px-2.5 py-1 rounded-lg text-[10px] transition-all">Selesai</button>
+                                      ` : ''}
+                                      <button onclick="handleDeleteOrder('${o.id}')" class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all" title="Hapus Pesanan">
+                                        <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              `).join('')}
+                            </tbody>
+                          </table>
+                        </div>
+                      `}
+                    </div>
+                  `}
+                </div>
+              `}
+            </div>
+          `}
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="bg-slate-900 text-slate-400 text-xs py-8 mt-12 border-t border-slate-800">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="text-center md:text-left space-y-1">
+              <p class="font-bold text-white text-sm">${state.logoSettings.text} &copy; 2026</p>
+              <p>Mendukung Kewirausahaan Siswa & Hubungan Sekolah dengan Masyarakat.</p>
+            </div>
+            <div class="flex space-x-4">
+              <span class="hover:text-white transition-colors">Guru</span>
+              <span>&bull;</span>
+              <span class="hover:text-white transition-colors">Siswa</span>
+              <span>&bull;</span>
+              <span class="hover:text-white transition-colors">Orang Tua</span>
+              <span>&bull;</span>
+              <span class="hover:text-white transition-colors">Umum</span>
+            </div>
+          </div>
+        </footer>
+
+        <!-- MODAL KONFIRMASI HAPUS PESANAN -->
+        ${state.orderToDelete ? `
+          <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+            <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-5">
+              <div class="text-center space-y-3">
+                <div class="h-14 w-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto text-red-500 border border-red-100">
+                  <i data-lucide="trash-2" class="h-6 w-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">Hapus Data Pesanan?</h3>
+                <p class="text-sm text-slate-500">Apakah Anda yakin ingin menghapus data transaksi pemesanan ini dari panel riwayat?</p>
+              </div>
+              <div class="flex space-x-3 pt-3 border-t border-slate-100">
+                <button onclick="state.orderToDelete = null; render();" class="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">Batal</button>
+                <button onclick="confirmDeleteOrder()" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-all shadow-sm">Ya, Hapus</button>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- MODAL KONFIRMASI HAPUS PRODUK -->
+        ${state.productToDelete ? `
+          <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+            <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-5">
+              <div class="text-center space-y-3">
+                <div class="h-14 w-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto text-red-500 border border-red-100">
+                  <i data-lucide="trash-2" class="h-6 w-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">Hapus Produk?</h3>
+                <p class="text-sm text-slate-500">Apakah Anda yakin ingin menghapus produk ini dari katalog? Tindakan ini tidak dapat dibatalkan.</p>
+              </div>
+              <div class="flex space-x-3 pt-3 border-t border-slate-100">
+                <button onclick="state.productToDelete = null; render();" class="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">Batal</button>
+                <button onclick="confirmDeleteProduct()" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-all shadow-sm">Ya, Hapus</button>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- MODAL EDIT / TAMBAH PRODUK -->
+        ${state.isEditing ? `
+          <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-xl border border-slate-100 space-y-5 my-8">
+              <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-extrabold text-slate-800">${state.editingProduct ? 'Ubah Data Produk' : 'Tambah Produk Baru'}</h3>
+                <button onclick="state.isEditing = false; render();" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                  <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+              </div>
+
+              <form onsubmit="handleSaveProduct(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Produk *</label>
+                  <input type="text" id="form_name" required placeholder="Contoh: Tas Laptop Rajut" value="${state.productForm.name}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kategori *</label>
+                  <select id="form_category" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    <option value="Kuliner" ${state.productForm.category === 'Kuliner' ? 'selected' : ''}>Kuliner</option>
+                    <option value="Fashion" ${state.productForm.category === 'Fashion' ? 'selected' : ''}>Fashion</option>
+                    <option value="Kriya & Furniture" ${state.productForm.category === 'Kriya & Furniture' ? 'selected' : ''}>Kriya & Furniture</option>
+                    <option value="Pertanian" ${state.productForm.category === 'Pertanian' ? 'selected' : ''}>Pertanian</option>
+                    <option value="Teknologi" ${state.productForm.category === 'Teknologi' ? 'selected' : ''}>Teknologi</option>
+                    <option value="Seni Kreatif" ${state.productForm.category === 'Seni Kreatif' ? 'selected' : ''}>Seni Kreatif</option>
+                    <option value="Lainnya" ${state.productForm.category === 'Lainnya' ? 'selected' : ''}>Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Akses Spesifik (Untuk) *</label>
+                  <select id="form_targetRole" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    <option value="Umum" ${state.productForm.targetRole === 'Umum' ? 'selected' : ''}>Umum (Semua)</option>
+                    <option value="Siswa" ${state.productForm.targetRole === 'Siswa' ? 'selected' : ''}>Siswa</option>
+                    <option value="Guru" ${state.productForm.targetRole === 'Guru' ? 'selected' : ''}>Guru</option>
+                    <option value="Orang Tua" ${state.productForm.targetRole === 'Orang Tua' ? 'selected' : ''}>Orang Tua</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga (Rupiah) *</label>
+                  <input type="number" id="form_price" required placeholder="Contoh: 25000" value="${state.productForm.price}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Jumlah Stok *</label>
+                  <input type="number" id="form_stock" required placeholder="Contoh: 15" value="${state.productForm.stock}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pembuat / Kelas Produsen *</label>
+                  <input type="text" id="form_seller" required placeholder="Contoh: XI Tata Busana 2" value="${state.productForm.seller}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tautan Foto Produk (URL)</label>
+                  <input type="text" id="form_image" placeholder="https://images.unsplash.com/photo-..." value="${state.productForm.image}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                  <p class="text-[10px] text-slate-400 mt-1">Kosongkan untuk menggunakan gambar standar bawaan sistem.</p>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Deskripsi & Detail Produk *</label>
+                  <textarea id="form_description" required rows="3" placeholder="Ceritakan tentang detail kelebihan, bahan, rasa, ukuran dari produk ini..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none">${state.productForm.description}</textarea>
+                </div>
+                <div class="md:col-span-2 flex justify-end space-x-2 pt-4 border-t border-slate-100">
+                  <button type="button" onclick="state.isEditing = false; render();" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">Batal</button>
+                  <button type="submit" class="px-5 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-all ${state.currentTheme.primary} ${state.currentTheme.hover}">Simpan Produk</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- MODAL GANTI PASSWORD -->
+        ${state.isChangingPassword ? `
+          <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-5">
+              <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-extrabold text-slate-800">Ubah Password Admin</h3>
+                <button onclick="state.isChangingPassword = false; render();" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                  <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+              </div>
+
+              <form onsubmit="handleChangePasswordSubmit(event)" class="space-y-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kata Sandi Saat Ini</label>
+                  <input type="password" id="pass_old" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kata Sandi Baru (Min. 4 Karakter)</label>
+                  <input type="password" id="pass_new1" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Ulangi Kata Sandi Baru</label>
+                  <input type="password" id="pass_new2" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                </div>
+
+                ${state.passwordMessage.text ? `
+                  <div class="p-3 rounded-xl text-xs font-semibold ${state.passwordMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}">
+                    ${state.passwordMessage.text}
+                  </div>
+                ` : ''}
+
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                  <button type="button" onclick="state.isChangingPassword = false; render();" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">Batal</button>
+                  <button type="submit" class="px-5 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-all ${state.currentTheme.primary} ${state.currentTheme.hover}">Ubah Kata Sandi</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- MODAL PEMESANAN -->
+        ${state.orderingProduct ? `
+          <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn">
+            <div class="bg-white rounded-3xl max-w-4xl w-full overflow-hidden shadow-xl border border-slate-100 flex flex-col md:flex-row my-8">
+              <!-- Info Produk (Kiri) -->
+              <div class="md:w-1/2 bg-slate-50 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-100">
+                <div class="space-y-4">
+                  <img src="${state.orderingProduct.image}" alt="${state.orderingProduct.name}" class="w-full aspect-video object-cover rounded-2xl border border-slate-200/80 shadow-sm" onerror="this.src='https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=500'">
+                  <div class="space-y-2">
+                    <div class="flex items-center space-x-2">
+                      <span class="bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">${state.orderingProduct.category}</span>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        state.orderingProduct.targetRole === 'Siswa' ? 'bg-blue-100 text-blue-700' :
+                        state.orderingProduct.targetRole === 'Guru' ? 'bg-purple-100 text-purple-700' :
+                        state.orderingProduct.targetRole === 'Orang Tua' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                      }">Khusus ${state.orderingProduct.targetRole}</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">${state.orderingProduct.name}</h3>
+                    <p class="text-xs font-semibold text-slate-400">Diproduksi oleh: ${state.orderingProduct.seller}</p>
+                  </div>
+                  <div class="space-y-1.5 pt-2">
+                    <h5 class="text-xs font-bold text-slate-500 uppercase">Deskripsi Produk:</h5>
+                    <p class="text-slate-600 text-sm leading-relaxed font-light">${state.orderingProduct.description}</p>
+                  </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-200/60 mt-6 flex justify-between items-center">
+                  <div>
+                    <span class="text-xs font-medium text-slate-400 block">Stok Tersedia</span>
+                    <span class="font-bold text-slate-700 text-sm">${state.orderingProduct.stock} pcs</span>
+                  </div>
+                  <div>
+                    <span class="text-xs font-medium text-slate-400 block">Harga Satuan</span>
+                    <span class="text-2xl font-black ${state.currentTheme.text}">Rp ${state.orderingProduct.price.toLocaleString('id-ID')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Formulir (Kanan) -->
+              <div class="md:w-1/2 p-6 flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                  <div class="space-y-1">
+                    <h3 class="text-lg font-extrabold text-slate-800">Formulir Pemesanan</h3>
+                    <p class="text-xs text-slate-400">Silakan lengkapi formulir untuk memesan produk karya siswa.</p>
+                  </div>
+                  <button onclick="state.orderingProduct = null; render();" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                  </button>
+                </div>
+
+                ${!state.orderSuccess ? `
+                  <form onsubmit="handleOrderSubmit(event)" class="space-y-4 my-6 flex-1">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Pemesan *</label>
+                      <input type="text" id="order_name" required placeholder="Masukkan nama lengkap Anda" value="${state.orderForm.name}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Saya Adalah *</label>
+                        <select id="order_role" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                          <option value="Siswa" ${state.orderForm.role === 'Siswa' ? 'selected' : ''}>Siswa</option>
+                          <option value="Guru" ${state.orderForm.role === 'Guru' ? 'selected' : ''}>Guru / Staff</option>
+                          <option value="Orang Tua" ${state.orderForm.role === 'Orang Tua' ? 'selected' : ''}>Orang Tua Murid</option>
+                          <option value="Umum" ${state.orderForm.role === 'Umum' ? 'selected' : ''}>Masyarakat Umum</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Jumlah Pesanan *</label>
+                        <input type="number" id="order_qty" min="1" max="${state.orderingProduct.stock}" required value="${state.orderForm.quantity}" oninput="updateOrderQty(this.value)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-center">
+                      </div>
+                    </div>
+
+                    <div class="space-y-3">
+                      <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">No. WhatsApp Pemesan</label>
+                        <input type="tel" id="order_phone" placeholder="Contoh: 081234567890" value="${state.orderForm.phone || ''}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                      </div>
+                      
+                      <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email Pemesan</label>
+                        <input type="email" id="order_email" placeholder="Contoh: nama@email.com" value="${state.orderForm.email || ''}" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <p class="text-[10px] text-slate-400 mt-1">* Isi salah satu kontak di atas (WhatsApp atau Email) agar kami dapat menghubungi Anda.</p>
+                      </div>
+
+                      <div id="contact_error_msg" class="hidden text-xs font-semibold text-red-500 flex items-center space-x-1">
+                        <i data-lucide="alert-circle" class="h-3.5 w-3.5"></i>
+                        <span>Mohon isi minimal salah satu: No. WhatsApp atau Email pemesan!</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Catatan Tambahan</label>
+                      <textarea id="order_notes" rows="2" placeholder="Tulis ukuran, varian rasa, atau jam pengambilan produk..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">${state.orderForm.notes}</textarea>
+                    </div>
+
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex justify-between items-center">
+                      <span class="text-xs font-bold text-slate-500">Estimasi Total Pembayaran:</span>
+                      <span id="order_total" class="text-base font-black ${state.currentTheme.text}">Rp ${(state.orderingProduct.price * state.orderForm.quantity).toLocaleString('id-ID')}</span>
+                    </div>
+
+                    <button type="submit" class="w-full py-3 rounded-xl text-sm font-bold text-white shadow-sm transition-all flex items-center justify-center space-x-2 ${state.currentTheme.primary} ${state.currentTheme.hover}">
+                      <i data-lucide="send" class="h-4 w-4"></i>
+                      <span>Kirim Pesanan Sekarang</span>
+                    </button>
+                  </form>
+                ` : `
+                  <div class="my-auto py-8 text-center space-y-4 animate-scaleUp">
+                    <div class="h-16 w-16 bg-green-50 text-green-500 border border-green-100 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                      <i data-lucide="check" class="h-8 w-8"></i>
+                    </div>
+                    <div class="space-y-1">
+                      <h4 class="font-extrabold text-slate-800 text-lg">Pemesanan Sukses!</h4>
+                      <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                        Terima kasih <strong class="text-slate-800">${state.orderForm.name}</strong>, pesanan Anda sebanyak <strong class="text-slate-800">${state.orderForm.quantity} pcs</strong> untuk <strong class="text-slate-800">${state.orderingProduct.name}</strong> telah berhasil direkam dalam sistem.
+                      </p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left text-xs text-slate-600 space-y-1.5 max-w-sm mx-auto">
+                      <p class="font-bold text-slate-800 mb-1">Langkah Selanjutnya:</p>
+                      <p>1. Panitia kewirausahaan kelas <strong class="text-slate-700">${state.orderingProduct.seller}</strong> akan menghubungi Anda melalui ${state.orderForm.phone ? `nomor WhatsApp (${state.orderForm.phone})` : `Email (${state.orderForm.email})`}.</p>
+                      <p>2. Konfirmasi pembayaran dan teknis penyerahan produk akan dikoordinasikan secara langsung.</p>
+                    </div>
+                    <button onclick="state.orderingProduct = null; render();" class="px-6 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">Tutup Halaman</button>
+                  </div>
+                `}
+
+                <div class="border-t border-slate-100 pt-3 text-[10px] text-slate-400 text-center">Aplikasi ini mendukung program edukasi kewirausahaan mandiri di lingkungan sekolah.</div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+      `;
+
+      // Render Lucide icons
+      lucide.createIcons();
+      renderPreview();
+    }
+
+    // --- Action Handlers ---
+    window.switchTab = function(tab) {
+      state.activeTab = tab;
+      render();
+    };
+
+    window.setAdminSubTab = function(subTab) {
+      state.adminSubTab = subTab;
+      render();
+    };
+
+    window.updateSearch = function(val) {
+      state.searchQuery = val;
+      // Jangan render penuh agar fokus input tidak hilang
+      const resetBtnExists = document.querySelector('.relative.flex-1 button');
+      if (val && !resetBtnExists) {
+        render();
+        // Kembalikan fokus
+        const input = document.getElementById('searchInput');
+        input.focus();
+        input.setSelectionRange(val.length, val.length);
+      } else if (!val && resetBtnExists) {
+        render();
+      } else {
+        // Render debounced/delayed if needed, or simply render to update catalog cards
+        // Untuk kestabilan sandbox, kita render penuh agar card-card langsung tersaring
+        render();
+        const input = document.getElementById('searchInput');
+        if (input) {
+          input.focus();
+          input.setSelectionRange(val.length, val.length);
+        }
+      }
+    };
+
+    window.clearSearch = function() {
+      state.searchQuery = '';
+      render();
+    };
+
+    window.setRoleFilter = function(role) {
+      state.selectedRoleFilter = role;
+      render();
+    };
+
+    window.setCategoryFilter = function(cat) {
+      state.selectedCategoryFilter = cat;
+      render();
+    };
+
+    window.resetFilters = function() {
+      state.searchQuery = '';
+      state.selectedRoleFilter = 'Semua';
+      state.selectedCategoryFilter = 'Semua';
+      render();
+    };
+
+    window.handleAdminLogin = function(e) {
+      e.preventDefault();
+      const pass = document.getElementById('adminPassInput').value;
+      if (pass === state.adminPassword) {
+        state.isAdminAuthenticated = true;
+        state.authError = '';
+        render();
+      } else {
+        state.authError = 'Kata sandi salah! Silakan coba lagi.';
+        render();
+      }
+    };
+
+    window.handleAdminLogout = function() {
+      state.isAdminAuthenticated = false;
+      state.activeTab = 'pengunjung';
+      saveState(); // Menjamin penyimpanan state mutakhir saat keluar panel
+      render();
+    };
+
+    window.openChangePassModal = function() {
+      state.isChangingPassword = true;
+      state.passwordForm = { old: '', new1: '', new2: '' };
+      state.passwordMessage = { type: '', text: '' };
+      render();
+    };
+
+    window.handleChangePasswordSubmit = function(e) {
+      e.preventDefault();
+      const oldVal = document.getElementById('pass_old').value;
+      const new1Val = document.getElementById('pass_new1').value;
+      const new2Val = document.getElementById('pass_new2').value;
+
+      if (oldVal !== state.adminPassword) {
+        state.passwordMessage = { type: 'error', text: 'Kata sandi lama tidak cocok!' };
+        render();
+        return;
+      }
+      if (new1Val.length < 4) {
+        state.passwordMessage = { type: 'error', text: 'Kata sandi baru minimal 4 karakter!' };
+        render();
+        return;
+      }
+      if (new1Val !== new2Val) {
+        state.passwordMessage = { type: 'error', text: 'Konfirmasi kata sandi baru tidak sesuai!' };
+        render();
+        return;
+      }
+
+      state.adminPassword = new1Val;
+      state.passwordMessage = { type: 'success', text: 'Kata sandi admin berhasil diubah!' };
+      saveState();
+      render();
+      setTimeout(() => {
+        state.isChangingPassword = false;
+        state.passwordMessage = { type: '', text: '' };
+        render();
+      }, 2000);
+    };
+
+    window.setTheme = function(themeId) {
+      const selected = THEME_PRESETS.find(t => t.id === themeId);
+      if (selected) {
+        state.currentTheme = selected;
+        saveState();
+        render();
+      }
+    };
+
+    window.setTempLogoType = function(type) {
+      state.tempLogo.type = type;
+      render();
+    };
+
+    window.saveLogoSettings = function() {
+      state.logoSettings = { ...state.tempLogo };
+      saveState();
+      render();
+    };
+
+    window.renderPreview = function() {
+      const container = document.getElementById('logoLivePreviewContainer');
+      if (!container) return;
+      if (state.tempLogo.type === 'text') {
+        container.innerHTML = `
+          <h5 class="font-extrabold text-sm">${state.tempLogo.text || 'CAP Marketplace'}</h5>
+          <span class="text-[9px] text-white/75 block">Karya Siswa, Kebanggaan Sekolah</span>
+        `;
+      } else {
+        container.innerHTML = `
+          <img src="${state.tempLogo.imageUrl || 'https://via.placeholder.com/150x50?text=LOGO'}" alt="Live Preview" class="max-h-8 object-contain rounded" onerror="this.src='https://via.placeholder.com/150x50?text=Error'">
+          <span class="text-[9px] text-white/75 block">Karya Siswa, Kebanggaan Sekolah</span>
+        `;
+      }
+    };
+
+    // --- CRUD BARANG ---
+    window.openAddProductModal = function() {
+      state.editingProduct = null;
+      state.productForm = {
+        name: '',
+        category: 'Kuliner',
+        targetRole: 'Umum',
+        price: '',
+        image: '',
+        description: '',
+        stock: '',
+        seller: ''
+      };
+      state.isEditing = true;
+      render();
+    };
+
+    window.openEditProductModal = function(id) {
+      const p = state.products.find(prod => prod.id === id);
+      if (p) {
+        state.editingProduct = p;
+        state.productForm = {
+          name: p.name,
+          category: p.category,
+          targetRole: p.targetRole,
+          price: p.price,
+          image: p.image,
+          description: p.description,
+          stock: p.stock,
+          seller: p.seller
+        };
+        state.isEditing = true;
+        render();
+      }
+    };
+
+    window.handleSaveProduct = function(e) {
+      e.preventDefault();
+      const name = document.getElementById('form_name').value;
+      const category = document.getElementById('form_category').value;
+      const targetRole = document.getElementById('form_targetRole').value;
+      const price = Number(document.getElementById('form_price').value);
+      const stock = Number(document.getElementById('form_stock').value);
+      const seller = document.getElementById('form_seller').value;
+      const image = document.getElementById('form_image').value || 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=500';
+      const description = document.getElementById('form_description').value;
+
+      if (state.editingProduct) {
+        state.products = state.products.map(p => p.id === state.editingProduct.id ? {
+          ...p, name, category, targetRole, price, stock, seller, image, description
+        } : p);
+      } else {
+        const newProd = {
+          id: Date.now().toString(),
+          name, category, targetRole, price, stock, seller, image, description
+        };
+        state.products.unshift(newProd);
+      }
+
+      state.isEditing = false;
+      saveState();
+      render();
+    };
+
+    window.handleDeleteProduct = function(id) {
+      state.productToDelete = id;
+      render();
+    };
+
+    window.confirmDeleteProduct = function() {
+      if (state.productToDelete) {
+        state.products = state.products.filter(p => p.id !== state.productToDelete);
+        state.productToDelete = null;
+        saveState();
+        render();
+      }
+    };
+
+    // --- PEMESANAN ---
+    window.openOrderModal = function(id) {
+      const p = state.products.find(prod => prod.id === id);
+      if (p) {
+        state.orderingProduct = p;
+        state.orderForm = { name: '', role: 'Siswa', phone: '', email: '', notes: '', quantity: 1 };
+        state.orderSuccess = false;
+        render();
+      }
+    };
+
+    window.updateOrderQty = function(val) {
+      const qty = Math.min(state.orderingProduct.stock, Math.max(1, Number(val)));
+      state.orderForm.quantity = qty;
+      const totalEl = document.getElementById('order_total');
+      if (totalEl) {
+        totalEl.textContent = `Rp ${(state.orderingProduct.price * qty).toLocaleString('id-ID')}`;
+      }
+    };
+
+    window.handleOrderSubmit = function(e) {
+      e.preventDefault();
+      const customerName = document.getElementById('order_name').value;
+      const customerRole = document.getElementById('order_role').value;
+      const customerPhone = document.getElementById('order_phone').value.trim();
+      const customerEmail = document.getElementById('order_email').value.trim();
+      const notes = document.getElementById('order_notes').value;
+      const quantity = state.orderForm.quantity;
+
+      // Validasi agar setidaknya salah satu dari Phone atau Email terisi
+      if (!customerPhone && !customerEmail) {
+        const errEl = document.getElementById('contact_error_msg');
+        if (errEl) {
+          errEl.classList.remove('hidden');
+          // Pastikan icon lucide di render kembali di dalam pesan error
+          lucide.createIcons();
+        }
+        return;
+      }
+
+      const newOrder = {
+        id: Date.now().toString(),
+        productId: state.orderingProduct.id,
+        productName: state.orderingProduct.name,
+        productImage: state.orderingProduct.image,
+        price: state.orderingProduct.price,
+        quantity: quantity,
+        totalPrice: state.orderingProduct.price * quantity,
+        customerName: customerName,
+        customerRole: customerRole,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
+        notes: notes,
+        seller: state.orderingProduct.seller,
+        status: 'Baru',
+        date: new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+      };
+
+      // Potong stok produk
+      state.products = state.products.map(p => {
+        if (p.id === state.orderingProduct.id) {
+          return { ...p, stock: Math.max(0, p.stock - quantity) };
+        }
+        return p;
+      });
+
+      state.orders.unshift(newOrder);
+      state.orderForm.name = customerName;
+      state.orderForm.phone = customerPhone;
+      state.orderForm.email = customerEmail;
+      state.orderSuccess = true;
+      saveState();
+      render();
+    };
+
+    window.updateOrderStatus = function(id, newStatus) {
+      state.orders = state.orders.map(o => o.id === id ? { ...o, status: newStatus } : o);
+      saveState();
+      render();
+    };
+
+    window.handleDeleteOrder = function(id) {
+      state.orderToDelete = id;
+      render();
+    };
+
+    window.confirmDeleteOrder = function() {
+      if (state.orderToDelete) {
+        state.orders = state.orders.filter(o => o.id !== state.orderToDelete);
+        state.orderToDelete = null;
+        saveState();
+        render();
+      }
+    };
+
+    // --- Inisialisasi awal ---
+    window.onload = function() {
+      render();
+    };
+  </script>
+</body>
+</html>
